@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.CommandLine;
 using System.IO;
 using System.Linq;
 using System.Reflection;
@@ -39,10 +40,9 @@ namespace Passphrase
             },
         };
 
-        static Config GetConfig(string [] args)
+        static Config GetConfig(string key)
         {
-            string key = (args.Length > 0 ? args[0] : DefaultWordListKey).ToLower();
-
+            key = key.ToLower();
             if (!_wordListConfig.ContainsKey(key))
                 key = DefaultWordListKey;
             return _wordListConfig[key];
@@ -61,9 +61,11 @@ namespace Passphrase
             }
         }
 
-        static void Main(string[] args)
+        static void Main(string wordlist = "large", int count = -1)
         {
-            var config = GetConfig(args);
+            var config = GetConfig(wordlist);
+            if (count > 0)
+                config.WordCount = count;
             var wordList = LoadWordList(config.Resource).ToDictionary(kvp => kvp.diceRoll, kvp => kvp.word);
             var words = Enumerable.Repeat(0, config.WordCount)
                                   .Select(i => GetDiceRoll(config.DiceCount))
