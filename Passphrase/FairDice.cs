@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Security.Cryptography;
 using System.Text;
 
@@ -10,20 +11,24 @@ namespace Passphrase
         static RNGCryptoServiceProvider _rngCsp = new RNGCryptoServiceProvider();
 
         public static byte Roll(byte sideCount = 6)
-        {
-            if (sideCount <= 0)
-                throw new ArgumentOutOfRangeException(nameof(sideCount));
+            => (byte) Roll(Enumerable.Range(1, sideCount).ToList());
 
-            int fullSetsOfValues = Byte.MaxValue / sideCount;
+        public static T Roll<T>(IList<T> items)
+        {
+            if (items.Count <= 0 || items.Count >= 256)
+                throw new ArgumentOutOfRangeException(nameof(items));
+
+            var itemCount = (byte)items.Count;
+            int fullSetsOfValues = Byte.MaxValue / itemCount;
             var randomNumber = new byte[1];
             do
             {
                 _rngCsp.GetBytes(randomNumber);
             } while (!IsFairRoll(randomNumber[0]));
-            return (byte)((randomNumber[0] % sideCount) + 1);
+            return items[randomNumber[0] % itemCount];
 
             bool IsFairRoll(byte roll)
-                => roll < sideCount * fullSetsOfValues;
+                => roll < itemCount * fullSetsOfValues;
         }
     }
 }

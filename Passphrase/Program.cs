@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.CommandLine;
+using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Reflection;
@@ -10,6 +11,7 @@ namespace Passphrase
     class Program
     {
         const string DefaultWordListKey = "large";
+        const string Symbols = @"~!#$%^&*()-=+[]\{}:;""'<>?/";
 
         class Config
         {
@@ -61,19 +63,57 @@ namespace Passphrase
             }
         }
 
-        static void Main(string wordlist = "large", int count = -1)
+        static string GetDiceRoll(int diceCount, byte sides = 6)
+            => string.Join("", Enumerable.Repeat(0, diceCount).Select(n => FairDice.Roll(sides)));
+
+        static IEnumerable<string> GetWords(Config config)
+        {
+            var wordList = LoadWordList(config.Resource).ToDictionary(kvp => kvp.diceRoll, kvp => kvp.word);
+            return Enumerable.Repeat(0, config.WordCount)
+                             .Select(i => GetDiceRoll(config.DiceCount))
+                             .Select(diceRoll => wordList[diceRoll]);
+        }
+
+        static void ChangeRandomWord(IList<string> words, Func<string, string> transform)
+        {
+            int index = FairDice.Roll((byte)words.Count) - 1;
+            words[index] = transform(words[index]);
+        }
+
+        static string MakeCapital(string word)
+            => new CultureInfo("en-us", false).TextInfo.ToTitleCase(word);
+
+        static string AddSymbol(string word)
+            => word + Symbols[FairDice.Roll((byte)Symbols.Length) - 1];
+
+        static int[] _digits = { 0, 1, 2, 3, 4, 5, 6, 7, 8, 9 };
+        static string AddNumber(string word)
+            => word + string.Join("", Enumerable.Repeat(0, 3).Select(n => FairDice.Roll(_digits)));
+
+        static void Main(string wordlist = "large",
+                         int count = -1,
+                         bool capitalize = false,
+                         bool symbol = false,
+                         bool number = false)
         {
             var config = GetConfig(wordlist);
+
             if (count > 0)
                 config.WordCount = count;
-            var wordList = LoadWordList(config.Resource).ToDictionary(kvp => kvp.diceRoll, kvp => kvp.word);
-            var words = Enumerable.Repeat(0, config.WordCount)
-                                  .Select(i => GetDiceRoll(config.DiceCount))
-                                  .Select(diceRoll => wordList[diceRoll]);
+
+            var words = GetWords(config).ToList();
+
+            if (capitalize)
+                ChangeRandomWord(words, MakeCapital);
+
+            if (symbol)
+                ChangeRandomWord(words, AddSymbol);
+
+            if (number)
+                ChangeRandomWord(words, AddNumber);
+
             Console.WriteLine(string.Join(" ", words));
 
-            string GetDiceRoll(int diceCount)
-                => string.Join("", Enumerable.Repeat(0, diceCount).Select(n => FairDice.Roll()));
         }
     }
 }
