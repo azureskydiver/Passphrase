@@ -10,9 +10,6 @@ namespace Passphrase
 {
     class Program
     {
-        const string DefaultWordListKey = "large";
-        const string Symbols = @"~!#$%^&*()-=+[]\{}:;""'<>?/";
-
         class Config
         {
             public string Resource { get; set; }
@@ -44,10 +41,9 @@ namespace Passphrase
 
         static Config GetConfig(string key)
         {
-            key = key.ToLower();
-            if (!_wordListConfig.ContainsKey(key))
-                key = DefaultWordListKey;
-            return _wordListConfig[key];
+            return _wordListConfig.TryGetValue(key.ToLower(), out Config config)
+                    ? config
+                    : _wordListConfig.First().Value;
         }
 
         static IEnumerable<(string diceRoll, string word)> LoadWordList(string resourceName)
@@ -63,20 +59,22 @@ namespace Passphrase
             }
         }
 
-        static string GetDiceRoll(int diceCount, byte sides = 6)
-            => string.Join("", Enumerable.Repeat(0, diceCount).Select(n => FairDice.Roll(sides)));
-
         static IEnumerable<string> GetWords(Config config)
         {
+            var dice = new FairDice();
             var wordList = LoadWordList(config.Resource).ToDictionary(kvp => kvp.diceRoll, kvp => kvp.word);
             return Enumerable.Repeat(0, config.WordCount)
-                             .Select(i => GetDiceRoll(config.DiceCount))
+                             .Select(i => GetDiceRoll())
                              .Select(diceRoll => wordList[diceRoll]);
+
+            string GetDiceRoll()
+                => string.Join("", Enumerable.Repeat(0, config.DiceCount).Select(n => dice.Roll()));
         }
 
         static void ChangeRandomWord(IList<string> words, Func<string, string> transform)
         {
-            int index = FairDice.Roll((byte)words.Count) - 1;
+            var dice = new FairDice(words.Count);
+            int index = dice.Roll() - 1;
             words[index] = transform(words[index]);
         }
 
@@ -84,11 +82,16 @@ namespace Passphrase
             => new CultureInfo("en-us", false).TextInfo.ToTitleCase(word);
 
         static string AddSymbol(string word)
-            => word + Symbols[FairDice.Roll((byte)Symbols.Length) - 1];
+        {
+            var dice = new FairDice<char>(@"~!#$%^&*()-=+[]\{}:;""'<>?/");
+            return word + dice.Roll();
+        }
 
-        static int[] _digits = { 0, 1, 2, 3, 4, 5, 6, 7, 8, 9 };
         static string AddNumber(string word)
-            => word + string.Join("", Enumerable.Repeat(0, 3).Select(n => FairDice.Roll(_digits)));
+        {
+            var dice = new FairDice<int>(Enumerable.Range(0, 10));
+            return word + string.Join("", Enumerable.Repeat(0, 3).Select(n => dice.Roll()));
+        }
 
         static void Main(string wordlist = "large",
                          int count = -1,
@@ -113,7 +116,6 @@ namespace Passphrase
                 ChangeRandomWord(words, AddNumber);
 
             Console.WriteLine(string.Join(" ", words));
-
         }
     }
 }
