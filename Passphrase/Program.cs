@@ -63,14 +63,14 @@ namespace Passphrase
         static IEnumerable<string> GetWords(Config config)
         {
             var wordList = LoadWordList(config.Resource);
-            var dice = new FairDice<string>(wordList);
+            var dice = new FairDie<string>(wordList);
             return Enumerable.Repeat(0, config.WordCount)
                              .Select(i => dice.Roll());
         }
 
         static void ChangeRandomWord(IList<string> words, Func<string, string> transform)
         {
-            var dice = new FairDice(words.Count);
+            var dice = new FairIntDie(words.Count);
             int index = dice.Roll() - 1;
             words[index] = transform(words[index]);
         }
@@ -80,13 +80,13 @@ namespace Passphrase
 
         static string AddSymbol(string word)
         {
-            var dice = new FairDice<char>(@"~!#$%^&*()-=+[]\{}:;""'<>?/");
+            var dice = new FairDie<char>(@"~!#$%^&*()-=+[]\{}:;""'<>?/");
             return word + dice.Roll();
         }
 
         static string AddNumber(string word)
         {
-            var dice = new FairDice<int>(Enumerable.Range(0, 10));
+            var dice = new FairDie<int>(Enumerable.Range(0, 10));
             return word + string.Join("", Enumerable.Repeat(0, 3).Select(n => dice.Roll()));
         }
 
