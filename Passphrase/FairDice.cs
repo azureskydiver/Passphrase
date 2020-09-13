@@ -12,28 +12,31 @@ namespace Passphrase
         static RNGCryptoServiceProvider _rngCsp = new RNGCryptoServiceProvider();
 
         readonly List<T> _items;
+        readonly long _maxRange;
+        readonly byte[] _buffer = new byte[sizeof(uint)];
 
         public FairDice(IEnumerable<T> items)
         {
             _items = items.ToList();
-            if (_items.Count <= 0 || _items.Count >= 256)
+            if (_items.Count <= 0)
                 throw new ArgumentOutOfRangeException(nameof(items));
+
+            var bucketSize = uint.MaxValue / _items.Count;
+            _maxRange = bucketSize * _items.Count;
         }
 
-        public T Roll()
+        public int RollInt()
         {
-            var itemCount = (byte)_items.Count;
-            int fullSetsOfValues = Byte.MaxValue / itemCount;
-            var randomNumber = new byte[1];
+            uint roll;
             do
             {
-                _rngCsp.GetBytes(randomNumber);
-            } while (!IsFairRoll(randomNumber[0]));
-            return _items[randomNumber[0] % itemCount];
-
-            bool IsFairRoll(byte roll)
-                => roll < itemCount * fullSetsOfValues;
+                _rngCsp.GetBytes(_buffer);
+                roll = BitConverter.ToUInt32(_buffer);
+            } while (roll >= _maxRange);
+            return (int)(roll % _items.Count);
         }
+
+        public T Roll() => _items[RollInt()];
     }
 
     class FairDice : FairDice<int>

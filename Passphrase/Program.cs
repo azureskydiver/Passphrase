@@ -13,7 +13,6 @@ namespace Passphrase
         class Config
         {
             public string Resource { get; set; }
-            public int DiceCount { get; set; }
             public int WordCount { get; set; }
         }
 
@@ -22,19 +21,16 @@ namespace Passphrase
             ["large"] = new Config() 
             {
                 Resource = "Passphrase.EFFLargeWordlist.txt",
-                DiceCount = 5,
                 WordCount = 6,
             },
             ["short"] = new Config()
             {
                 Resource = "Passphrase.EFFShortWordlist1.txt",
-                DiceCount = 4,
                 WordCount = 4,
             },
             ["memorable"] = new Config()
             {
                 Resource = "Passphrase.EFFShortWordlist2.txt",
-                DiceCount = 4,
                 WordCount = 4,
             },
         };
@@ -46,29 +42,30 @@ namespace Passphrase
                     : _wordListConfig.First().Value;
         }
 
-        static IEnumerable<(string diceRoll, string word)> LoadWordList(string resourceName)
+        static IEnumerable<string> LoadWordList(string resourceName)
         {
             using var stream = Assembly.GetExecutingAssembly().GetManifestResourceStream(resourceName);
             using var reader = new StreamReader(stream);
             while (!reader.EndOfStream)
             {
                 var line = reader.ReadLine();
-                var parts = line.Split('\t');
-                if (parts.Length == 2)
-                    yield return (parts[0].Trim(), parts[1].Trim());
+                var wordIndex = line.IndexOf('\t');
+                if (wordIndex >= 0)
+                {
+                    yield return line.AsSpan()
+                                     .Slice(wordIndex + 1)
+                                     .Trim()
+                                     .ToString();
+                }
             }
         }
 
         static IEnumerable<string> GetWords(Config config)
         {
-            var dice = new FairDice();
-            var wordList = LoadWordList(config.Resource).ToDictionary(kvp => kvp.diceRoll, kvp => kvp.word);
+            var wordList = LoadWordList(config.Resource);
+            var dice = new FairDice<string>(wordList);
             return Enumerable.Repeat(0, config.WordCount)
-                             .Select(i => GetDiceRoll())
-                             .Select(diceRoll => wordList[diceRoll]);
-
-            string GetDiceRoll()
-                => string.Join("", Enumerable.Repeat(0, config.DiceCount).Select(n => dice.Roll()));
+                             .Select(i => dice.Roll());
         }
 
         static void ChangeRandomWord(IList<string> words, Func<string, string> transform)
