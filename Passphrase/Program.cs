@@ -10,34 +10,36 @@ namespace Passphrase
 {
     class Program
     {
+        enum WordList { Large, Short, Memorable }
+
         class Config
         {
             public string Resource { get; set; }
             public int WordCount { get; set; }
         }
 
-        static Dictionary<string, Config> _wordListConfig = new Dictionary<string, Config>()
+        static Dictionary<WordList, Config> _wordListConfig = new ()
         {
-            ["large"] = new Config() 
+            [WordList.Large] = new Config() 
             {
                 Resource = "Passphrase.EFFLargeWordlist.txt",
                 WordCount = 6,
             },
-            ["short"] = new Config()
+            [WordList.Short] = new Config()
             {
                 Resource = "Passphrase.EFFShortWordlist1.txt",
                 WordCount = 4,
             },
-            ["memorable"] = new Config()
+            [WordList.Memorable] = new Config()
             {
                 Resource = "Passphrase.EFFShortWordlist2.txt",
                 WordCount = 4,
             },
         };
 
-        static Config GetConfig(string key)
+        static Config GetConfig(WordList key)
         {
-            return _wordListConfig.TryGetValue(key.ToLower(), out Config config)
+            return _wordListConfig.TryGetValue(key, out Config config)
                     ? config
                     : _wordListConfig.First().Value;
         }
@@ -90,13 +92,13 @@ namespace Passphrase
             return word + string.Join("", Enumerable.Repeat(0, 3).Select(n => dice.Roll()));
         }
 
-        static void Main(string wordlist = "large",
+        static void Main(WordList wordList = WordList.Large,
                          int count = -1,
                          bool capitalize = false,
                          bool symbol = false,
                          bool number = false)
         {
-            var config = GetConfig(wordlist);
+            var config = GetConfig(wordList);
 
             if (count > 0)
                 config.WordCount = count;
