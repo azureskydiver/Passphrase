@@ -9,7 +9,7 @@ namespace Passphrase
 {
     class FairDie<T>
     {
-        static RNGCryptoServiceProvider _rngCsp = new RNGCryptoServiceProvider();
+        static RandomNumberGenerator _rngCsp = RandomNumberGenerator.Create();
 
         readonly List<T> _items;
         readonly long _maxRange;
